@@ -1,88 +1,101 @@
-import pem
-import re
-import os
-import base64
 from datetime import datetime
 import zeep
 from zeep.plugins import HistoryPlugin
-import codecs
 from lxml import etree
 
 
 class ClienteFormas:
 
-	# WSDL PRUEBAS 	 (FORMAS DIGITALES)
-    wsdl_url = "http://dev33.facturacfdi.mx:80/WSCancelacionService?wsdl" 
-    
-    # WSDL PRODUCCIÓN (FORMAS DIGITALES)
-    #wsdl_url="https://v33.facturacfdi.mx/WSTimbradoCFDIService?wsdl"
+    # WSDL PRUEBAS (FORMAS DIGITALES)
+    wsdl_url = "	http://dev33.facturacfdi.mx:80/WSCancelacion40Service?wsdl"
+    nameSpace = "http://wservicios/"
+    cliente = 0
 
     DEBUG = True
 
+    # METODO PRINCIPAL
+    def __init__(self):
 
-    def __init__(self, rfcEmisor, fecha, folios, certificado, llave_privada, password_pk, userWS, passWS, Debug=True):
-    	self.rfcEmisor=rfcEmisor
-    	self.fecha=fecha
-    	self.folios=folios
-    	self.certificado=certificado
-    	self.llave_privada=llave_privada
-    	self.password_pk=password_pk
-    	self.userWS=userWS
-    	self.passWS=passWS
-    	if Debug is not None:
-    		self.DEBUG = Debug
+        # PARAMETROS REQUERIDOS
+        self.rfcEmisor = "EKU9003173C9"
+        self.fecha = str(datetime.now().isoformat())[:19]
+        self.certificado = "C:\\Certificados\\CSD_Sucursal_1_EKU9003173C9_20230517_223850.cer"
+        self.llave_privada = "C:\\Certificados\\CSD_Sucursal_1_EKU9003173C9_20230517_223850.key"
+        self.password_pk = "12345678a"
+        self.userWS = "pruebasWS"
+        self.passWS = "pruebasWS"
+        
 
-
+    # METODO PARA OBTENER ARREGLO DE BYTE[]
     def getBinary(self, certificado):
-    	with open(certificado, 'rb') as binary_file:
-    		binary_file_data = binary_file.read()
-    	return binary_file_data
+        
+        with open(certificado, 'rb') as binary_file:
+            binary_file_data = binary_file.read()
+        return binary_file_data
 
-    def cancelar(self):
-    	history = HistoryPlugin()
-    	cliente = zeep.Client(wsdl = self.wsdl_url, plugins=[history])
-    	try:
-    		accesos_type = cliente.get_type("ns1:accesos")
-    		accesos = accesos_type(usuario=self.userWS, password=self.passWS)
-    		response = cliente.service.Cancelacion_1(
-    			rfcEmisor=self.rfcEmisor,
-    			fecha=self.fecha,
-    			folios=self.folios,
-    			publicKey=self.getBinary(self.certificado),
-    			privateKey=self.getBinary(self.llave_privada),
-    			password=self.password_pk,
-    			accesos=accesos)
-    		if self.DEBUG:
-    			print('------------------------ request body ------------------------')
-    			print(etree.tostring(history.last_sent['envelope'], pretty_print=True, encoding='unicode'))
-    			print('------------------------ response ------------------------')
-    			print(response)
-    		return response
-    	except Exception as exception:
-    		print(history.last_sent)
-    		print(history.last_received)
-    		print("Message %s" % exception)
+    # METODO PARA CANCELAR
+    def cancelar40_1(self):
+        
+        # HISTORIAL PARA DEPURACION
+        history = HistoryPlugin()
+        self.cliente = zeep.Client(wsdl=self.wsdl_url, plugins=[history])
 
-    def save_xml(self, path, filename, acuse):
-    	file = codecs.open(path + filename, "w", "utf-8")
-    	file.write(acuse)
-    	file.close()
+        try:
+            # NAMESPACE
+            self.nameSpace = "http://wservicios/"
 
+            # OBTENEMOS EL TIPO DE ACCESO CON EL ESPACIO DE NOMBRES
+            accesosType = self.cliente.get_type( "{%s}accesos" % self.nameSpace)
+            
+            # INSTANCIA DE ACCESOS
+            accesos = accesosType(usuario=self.userWS, password=self.passWS)
+            
+            # LISTA DE LOS FOLIOS A CANCELAR
+            WsFolios40 = []
+            WsFolios40.append(self.getFolios("01","3E1CAAF9-F60C-4EAA-AB38-6526FEDB9549","314FEAB4-8555-446D-831F-E0D187BFDA79"))
+            WsFolios40.append(self.getFolios("02","3E1CAAF9-F60C-4EAA-AB38-6526FEDB9549",""))
+            WsFolios40.append(self.getFolios("03","3E1CAAF9-F60C-4EAA-AB38-6526FEDB9549",""))
+            WsFolios40.append(self.getFolios("04","3E1CAAF9-F60C-4EAA-AB38-6526FEDB9549",""))
 
-#Ejemplo de cancelación
-path = os.path.dirname(os.path.abspath(__file__)) + '/resources/'
+            # SE HACE LA LLAMADA AL SERVICIO DE CANCELACION
+            response = self.cliente.service.Cancelacion40_1(
+                rfcEmisor=self.rfcEmisor,
+                fecha=self.fecha,
+                folios=WsFolios40,
+                publicKey=self.getBinary(self.certificado),
+                privateKey=self.getBinary(self.llave_privada),
+                password=self.password_pk,
+                accesos=accesos
+            )
 
-rfcEmisor='EWE1709045U0'
-fecha=str(datetime.now().isoformat())[:19]
-folios = ["CE1624C7-1317-4C8D-A047-210E043F6F55"]
-cer_path = path + 'CSD_EWE1709045U0_20190617_132205s.cer'
-key_path = path + 'CSD_EWE1709045U0_20190617_132205.key'
-pkeyPass = '12345678a'
-usuarioWS='pruebasWS'
-passwordWS='pruebasWS'
-cf = ClienteFormas(rfcEmisor, fecha, folios, cer_path, key_path, pkeyPass, usuarioWS, passwordWS)
-# Cancelar comprobantes
-respuesta = cf.cancelar()
-# Guarda Acuse en archivo XML
-if respuesta.acuse:
-	cf.save_xml(path, 'acuse.xml', respuesta.acuse)
+            if self.DEBUG:
+                # SE IMPRIME EL REQUEST Y RESPONSE
+                print('------------------------ request body ------------------------')
+                print(etree.tostring(
+                    history.last_sent['envelope'], pretty_print=True, encoding='unicode'))
+                print('------------------------ response ------------------------')
+                print(response)
+
+        except Exception as exception:
+            # MOSTRAR POSIBLES ERRORES
+            print("Message %s" % exception)
+        
+    # METODO PARA GENERAR LOS FOLIOS
+    def getFolios(self,motivo,uuid,folioSustitucion):
+        # INSTANCIA A WSFOLIOS40
+        wsFolios40 = self.cliente.get_type("{%s}wsFolios40" % self.nameSpace)
+        
+        # INSTANCIA A WSFOLIO
+        wsfolio = self.cliente.get_type("{%s}wsFolio" % self.nameSpace)(
+            motivo=motivo,
+            uuid=uuid,
+            folioSustitucion=folioSustitucion
+        )
+        
+        return wsFolios40(folio=[wsfolio])
+
+# INSTANCIA
+cf = ClienteFormas()
+
+# METODO DE CANCELACION 
+cf.cancelar40_1()
