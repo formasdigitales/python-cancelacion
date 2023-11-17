@@ -101,7 +101,7 @@ El método de cancelación utliza el atributo __cliente__ para hacer la comunica
         
         return wsFolios40(folio=[wsfolio])
 ```
-El método __getFolios__ retorna la lista de del folio que será cancelado.
+El método __getFolios__ retorna la lista del folio que será cancelado.
 
 ```Python
 if self.DEBUG:
