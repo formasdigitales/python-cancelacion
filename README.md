@@ -35,8 +35,6 @@ La clase __ClienteFormas__ integra todos los metodos, atributos y variables nece
 
 Se declaran y asignan los valores necesarios en el metodo principal
 
-<br/>
-
 ## Cancelación
 
 ```Python
@@ -81,8 +79,6 @@ Se declaran y asignan los valores necesarios en el metodo principal
 ```
 
 El método de cancelación utliza el atributo __cliente__ para hacer la comunicación con el Web Service
-
-<br/>
 
 ## Generar Folios
 
